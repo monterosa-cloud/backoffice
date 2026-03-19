@@ -1,0 +1,88 @@
+export interface Company {
+  id: string;
+  upload_id: string | null;
+  user_id: string;
+  company_name: string;
+  country: string;
+  city: string | null;
+  province: string | null;
+  address: string | null;
+  vat_number: string | null;
+  cw_url: string | null;
+  website: string | null;
+  sub_sector: string | null;
+  service_type: string | null;
+  revenue_band: string | null;
+  ownership: string | null;
+  latest_year: number | null;
+  revenue_y1: number | null;
+  revenue_y2: number | null;
+  revenue_y3: number | null;
+  revenue_y4: number | null;
+  gross_margin_y1: number | null;
+  gross_margin_y2: number | null;
+  gross_margin_y3: number | null;
+  gross_margin_y4: number | null;
+  net_result_y1: number | null;
+  net_result_y2: number | null;
+  net_result_y3: number | null;
+  net_result_y4: number | null;
+  equity_y1: number | null;
+  equity_y2: number | null;
+  equity_y3: number | null;
+  equity_y4: number | null;
+  employees_y1: number | null;
+  employees_y2: number | null;
+  employees_y3: number | null;
+  employees_y4: number | null;
+  revenue_cagr_3y: number | null;
+  gross_margin_pct: number | null;
+  net_margin_pct: number | null;
+  margin_trend: string | null;
+  profitability_flag: string | null;
+  equity_flag: string | null;
+  pe_score: number | null;
+  score_revenue_fit: number | null;
+  score_financial_health: number | null;
+  score_growth_quality: number | null;
+  score_operational_fit: number | null;
+  investment_flags: string[] | null;
+  analyst_summary: string | null;
+  fetch_status: string | null;
+  verification_passed: boolean | null;
+  verification_issues: string[] | null;
+  source: string | null;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Upload {
+  id: string;
+  user_id: string;
+  filename: string;
+  storage_path: string;
+  row_count: number | null;
+  status: "pending" | "processing" | "done" | "error";
+  error_msg: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface ParsedCompany {
+  company_name: string;
+  country: string;
+  city: string | null;
+  region: string | null;
+  vat_number: string | null;
+  cw_url: string | null;
+  pe_score: number | null;
+  sub_sector: string | null;
+  service_type: string | null;
+  revenue_band: string | null;
+  revenue_y1: number | null;
+  gross_margin_y1: number | null;
+  net_result_y1: number | null;
+  equity_y1: number | null;
+  employees_y1: number | null;
+}
