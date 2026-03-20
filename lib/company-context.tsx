@@ -1,55 +1,79 @@
 'use client'
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import type { Company, Upload } from '@/lib/types'
 
 interface CompanyContextType {
   companies: Company[]
   uploads: Upload[]
   addCompaniesFromUpload: (upload: Upload, companies: Company[]) => void
+  loading: boolean
 }
 
 const CompanyContext = createContext<CompanyContextType>({
   companies: [],
   uploads: [],
   addCompaniesFromUpload: () => {},
+  loading: true,
 })
 
-function loadFromStorage<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
-  } catch {
-    return fallback
-  }
-}
-
 export function CompanyProvider({ children }: { children: ReactNode }) {
-  const [companies, setCompanies] = useState<Company[]>(() => loadFromStorage('pe_companies', []))
-  const [uploads, setUploads] = useState<Upload[]>(() => loadFromStorage('pe_uploads', []))
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [uploads, setUploads] = useState<Upload[]>([])
+  const [loading, setLoading] = useState(true)
 
+  // Fetch user's uploads and companies from Supabase
   useEffect(() => {
-    localStorage.setItem('pe_companies', JSON.stringify(companies))
-  }, [companies])
+    async function fetchData() {
+      try {
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
 
-  useEffect(() => {
-    localStorage.setItem('pe_uploads', JSON.stringify(uploads))
-  }, [uploads])
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          setLoading(false)
+          return
+        }
+
+        // Fetch uploads
+        const { data: uploadsData, error: uploadsError } = await supabase
+          .from('uploads')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (!uploadsError && uploadsData) {
+          setUploads(uploadsData)
+        }
+
+        // Fetch companies
+        const { data: companiesData, error: companiesError } = await supabase
+          .from('companies')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (!companiesError && companiesData) {
+          setCompanies(companiesData)
+        }
+      } catch (error) {
+        console.error('Failed to fetch data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const addCompaniesFromUpload = useCallback((upload: Upload, newCompanies: Company[]) => {
     setUploads((prev) => [upload, ...prev])
-    setCompanies((prev) => {
-      const existing = new Map(prev.map((c) => [`${c.company_name}|${c.country}`, c]))
-      newCompanies.forEach((c) => {
-        existing.set(`${c.company_name}|${c.country}`, c)
-      })
-      return Array.from(existing.values())
-    })
+    setCompanies((prev) => [...newCompanies, ...prev])
   }, [])
 
   return (
-    <CompanyContext.Provider value={{ companies, uploads, addCompaniesFromUpload }}>
+    <CompanyContext.Provider value={{ companies, uploads, addCompaniesFromUpload, loading }}>
       {children}
     </CompanyContext.Provider>
   )

@@ -58,14 +58,34 @@ export default function Dropzone({ onUpload }: DropzoneProps) {
     setError(null)
   }
 
-  const handleUpload = (runScoring: boolean) => {
-    if (file && parseResult) {
-      setUploading(true)
-      setTimeout(() => {
-        onUpload(file, parseResult.fullCompanies, runScoring)
+  const handleUpload = async (runScoring: boolean) => {
+    if (!file || !parseResult) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('companies', JSON.stringify(parseResult.fullCompanies))
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        setError(error.error || 'Upload failed')
         setUploading(false)
-        handleReset()
-      }, 600)
+        return
+      }
+
+      const result = await response.json()
+      onUpload(file, result.companies || parseResult.fullCompanies, runScoring)
+      handleReset()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploading(false)
     }
   }
 
