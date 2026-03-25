@@ -5,77 +5,74 @@ import { createClient } from '@/lib/supabase/client'
 import type { Company, Upload } from '@/lib/types'
 
 interface CompanyContextType {
-    companies: Company[]
-    uploads: Upload[]
-    addCompaniesFromUpload: (upload: Upload, companies: Company[]) => void
-    loading: boolean
+  companies: Company[]
+  uploads: Upload[]
+  addCompaniesFromUpload: (upload: Upload, companies: Company[]) => void
+  loading: boolean
 }
 
 const CompanyContext = createContext<CompanyContextType>({
-    companies: [],
-    uploads: [],
-    addCompaniesFromUpload: () => {},
-    loading: true,
+  companies: [],
+  uploads: [],
+  addCompaniesFromUpload: () => {},
+  loading: true,
 })
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
-    const [companies, setCompanies] = useState<Company[]>([])
-    const [uploads, setUploads] = useState<Upload[]>([])
-    const [loading, setLoading] = useState(true)
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [uploads, setUploads] = useState<Upload[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Fetch user's uploads and companies from Supabase
   useEffect(() => {
-        async function fetchData() {
-                try {
-                          const supabase = createClient()
+    async function fetchData() {
+      try {
+        const supabase = createClient()
 
-                  const { data: { user } } = await supabase.auth.getUser()
-                          if (!user) {
-                                      setLoading(false)
-                                      return
-                          }
-
-                  // Fetch uploads
-                  const { data: uploadsData, error: uploadsError } = await supabase
-                            .from('uploads')
-                            .select('*')
-                            .order('created_at', { ascending: false })
-
-                  if (!uploadsError && uploadsData) {
-                              setUploads(uploadsData)
-                  }
-
-                  // Fetch companies
-                  const { data: companiesData, error: companiesError } = await supabase
-                            .from('companies')
-                            .select('*')
-                            .order('created_at', { ascending: false })
-
-                  if (!companiesError && companiesData) {
-                              setCompanies(companiesData)
-                  }
-                } catch (error) {
-                          console.error('Failed to fetch data:', error)
-                } finally {
-                          setLoading(false)
-                }
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          setLoading(false)
+          return
         }
 
-                fetchData()
+        const { data: uploadsData, error: uploadsError } = await supabase
+          .from('uploads')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (!uploadsError && uploadsData) {
+          setUploads(uploadsData)
+        }
+
+        const { data: companiesData, error: companiesError } = await supabase
+          .from('companies')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (!companiesError && companiesData) {
+          setCompanies(companiesData)
+        }
+      } catch (error) {
+        console.error('Failed to fetch data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
   }, [])
 
   const addCompaniesFromUpload = useCallback((upload: Upload, newCompanies: Company[]) => {
-        setUploads((prev) => [upload, ...prev])
-        setCompanies((prev) => [...newCompanies, ...prev])
+    setUploads((prev) => [upload, ...prev])
+    setCompanies((prev) => [...newCompanies, ...prev])
   }, [])
 
   return (
-        <CompanyContext.Provider value={{ companies, uploads, addCompaniesFromUpload, loading }}>
-          {children}
-        </CompanyContext.Provider>CompanyContext.Provider>
-      )
+    <CompanyContext.Provider value={{ companies, uploads, addCompaniesFromUpload, loading }}>
+      {children}
+    </CompanyContext.Provider>
+  )
 }
 
 export function useCompanies() {
-    return useContext(CompanyContext)
+  return useContext(CompanyContext)
 }
