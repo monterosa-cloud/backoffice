@@ -80,6 +80,7 @@ export interface Company {
   digital_presence_score: number | null;
   preferred_outreach_channel: string | null;
   digital_notes: string | null;
+  contacted: boolean | null;
   created_at: string;
   updated_at: string;
 }

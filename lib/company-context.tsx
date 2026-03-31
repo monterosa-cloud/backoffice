@@ -8,6 +8,7 @@ interface CompanyContextType {
   companies: Company[]
   uploads: Upload[]
   addCompaniesFromUpload: (upload: Upload, companies: Company[]) => void
+  updateCompany: (id: string, updates: Partial<Company>) => void
   loading: boolean
 }
 
@@ -15,6 +16,7 @@ const CompanyContext = createContext<CompanyContextType>({
   companies: [],
   uploads: [],
   addCompaniesFromUpload: () => {},
+  updateCompany: () => {},
   loading: true,
 })
 
@@ -66,8 +68,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     setCompanies((prev) => [...newCompanies, ...prev])
   }, [])
 
+  const updateCompany = useCallback((id: string, updates: Partial<Company>) => {
+    setCompanies((prev) => prev.map((c) => c.id === id ? { ...c, ...updates } : c))
+  }, [])
+
   return (
-    <CompanyContext.Provider value={{ companies, uploads, addCompaniesFromUpload, loading }}>
+    <CompanyContext.Provider value={{ companies, uploads, addCompaniesFromUpload, updateCompany, loading }}>
       {children}
     </CompanyContext.Provider>
   )

@@ -1,11 +1,12 @@
 'use client'
 
-import { Suspense, useState, useMemo, useCallback } from 'react'
+import { Suspense, useState, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Company } from '@/lib/types'
 import { CompanyTable } from '@/components/companies/company-table'
 import { CompanyDetailModal } from '@/components/companies/company-detail-modal'
 import { useCompanies } from '@/lib/company-context'
+import { createClient } from '@/lib/supabase/client'
 
 const SECTORS = ['HVAC', 'Electrical', 'Fire Safety', 'Multi-trade', 'Access Control'] as const
 
@@ -25,7 +26,8 @@ const PER_PAGE = 15
 function CompaniesPageInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { companies: allCompanies } = useCompanies()
+  const { companies: allCompanies, updateCompany } = useCompanies()
+  const supabaseRef = useRef(createClient())
 
   const parseFilters = useCallback((): Filters => {
     const countries = searchParams.get('countries')?.split(',').filter(Boolean) || ['Belgium']
@@ -158,6 +160,22 @@ function CompaniesPageInner() {
     return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value]
   }
 
+  const handleContactedToggle = useCallback(async (companyId: string, newValue: boolean) => {
+    // Optimistic update
+    updateCompany(companyId, { contacted: newValue })
+
+    const { error } = await supabaseRef.current
+      .from('companies')
+      .update({ contacted: newValue })
+      .eq('id', companyId)
+
+    if (error) {
+      console.error('Failed to update contacted:', error)
+      // Revert optimistic UI
+      updateCompany(companyId, { contacted: !newValue })
+    }
+  }, [updateCompany])
+
   const Checkbox = ({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) => (
     <label className="flex items-center gap-2 py-1 cursor-pointer text-sm" style={{ color: checked ? '#f5f5f5' : '#888888' }}>
       <input type="checkbox" checked={checked} onChange={onChange} className="rounded" style={{ accentColor: '#d4a843' }} />
@@ -260,7 +278,7 @@ function CompaniesPageInner() {
         ) : (
           <>
             <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-              <CompanyTable companies={paginatedCompanies} onSort={handleSort} sortField={sortField} sortDir={sortDir} onRowClick={setSelectedCompany} />
+              <CompanyTable companies={paginatedCompanies} onSort={handleSort} sortField={sortField} sortDir={sortDir} onRowClick={setSelectedCompany} onContactedToggle={handleContactedToggle} />
             </div>
 
             {totalPages > 1 && (

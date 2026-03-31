@@ -9,6 +9,7 @@ interface CompanyTableProps {
   sortField: string
   sortDir: 'asc' | 'desc'
   onRowClick: (company: Company) => void
+  onContactedToggle?: (companyId: string, newValue: boolean) => void
 }
 
 function formatCurrency(value: number | null): string {
@@ -24,26 +25,37 @@ function formatCurrency(value: number | null): string {
   return `${sign}€ ${Math.round(abs)}`
 }
 
-function formatPercent(value: number | null): string {
-  if (value === null || value === undefined) return '—'
-  return `${value.toFixed(1)}%`
-}
-
 const COLUMNS: { key: string; label: string; sortable: boolean; align?: string }[] = [
   { key: 'index', label: '#', sortable: false },
   { key: 'company_name', label: 'Company', sortable: true },
-  { key: 'country', label: 'Country', sortable: true },
   { key: 'city', label: 'City', sortable: true },
   { key: 'revenue_y1', label: 'Revenue', sortable: true, align: 'right' },
-  { key: 'gross_margin_pct', label: 'Gross Margin', sortable: true, align: 'right' },
-  { key: 'net_result_y1', label: 'Net Result', sortable: true, align: 'right' },
-  { key: 'employees_y1', label: 'Employees', sortable: true, align: 'right' },
   { key: 'pe_score', label: 'PE Score', sortable: true, align: 'center' },
+  { key: 'website_url', label: 'Website', sortable: false, align: 'center' },
+  { key: 'founder_name', label: 'Founder', sortable: true },
+  { key: 'has_maintenance', label: 'Maint.', sortable: false, align: 'center' },
+  { key: 'has_emergency', label: '24h', sortable: false, align: 'center' },
+  { key: 'website_modernity', label: 'Site Quality', sortable: true, align: 'center' },
   { key: 'margin_trend', label: 'Trend', sortable: true, align: 'center' },
   { key: 'flags', label: 'Flags', sortable: false },
+  { key: 'contacted', label: 'Contacted', sortable: true, align: 'center' },
 ]
 
-export function CompanyTable({ companies, onSort, sortField, sortDir, onRowClick }: CompanyTableProps) {
+function getModernityColor(modernity: string | null): string {
+  if (modernity === 'modern') return '#4ade80'
+  if (modernity === 'dated') return '#fb923c'
+  if (modernity === 'very_old') return '#f87171'
+  return '#555555'
+}
+
+function getModernityLabel(modernity: string | null): string {
+  if (modernity === 'modern') return 'Modern'
+  if (modernity === 'dated') return 'Dated'
+  if (modernity === 'very_old') return 'Old'
+  return '—'
+}
+
+export function CompanyTable({ companies, onSort, sortField, sortDir, onRowClick, onContactedToggle }: CompanyTableProps) {
   const handleSort = (key: string) => {
     if (!COLUMNS.find((c) => c.key === key)?.sortable) return
     const newDir = sortField === key && sortDir === 'asc' ? 'desc' : 'asc'
@@ -111,22 +123,62 @@ export function CompanyTable({ companies, onSort, sortField, sortDir, onRowClick
                 <td className="px-3 py-2.5 font-medium" style={{ color: '#f5f5f5' }}>
                   {company.company_name}
                 </td>
-                <td className="px-3 py-2.5" style={{ color: '#888888' }}>{company.country}</td>
                 <td className="px-3 py-2.5" style={{ color: '#888888' }}>{company.city}</td>
                 <td className="px-3 py-2.5 text-right" style={{ color: '#f5f5f5' }}>
                   {formatCurrency(company.revenue_y1)}
                 </td>
-                <td className="px-3 py-2.5 text-right" style={{ color: '#888888' }}>
-                  {formatPercent(company.gross_margin_pct)}
-                </td>
-                <td className="px-3 py-2.5 text-right" style={{ color: '#f5f5f5' }}>
-                  {formatCurrency(company.net_result_y1)}
-                </td>
-                <td className="px-3 py-2.5 text-right" style={{ color: '#888888' }}>
-                  {company.employees_y1 ?? '—'}
-                </td>
                 <td className="px-3 py-2.5 text-center">
                   <ScoreBadge score={company.pe_score} size="sm" />
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  {company.website_url ? (
+                    <a
+                      href={company.website_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-block"
+                      style={{ color: '#d4a843', fontSize: 14 }}
+                      title={company.website_url}
+                    >
+                      &#x1F517;
+                    </a>
+                  ) : (
+                    <span style={{ color: '#333' }}>—</span>
+                  )}
+                </td>
+                <td className="px-3 py-2.5 text-sm" style={{ color: '#888888' }}>
+                  {company.founder_name ? (
+                    <span>
+                      {company.founder_name}
+                      {company.founder_title && (
+                        <span className="text-xs ml-1" style={{ color: '#555' }}>
+                          ({company.founder_title})
+                        </span>
+                      )}
+                    </span>
+                  ) : '—'}
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  {company.has_maintenance === true ? (
+                    <span style={{ color: '#4ade80' }}>&#10003;</span>
+                  ) : company.has_maintenance === false ? (
+                    <span style={{ color: '#555' }}>—</span>
+                  ) : (
+                    <span style={{ color: '#333' }}>—</span>
+                  )}
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  {company.has_emergency === true ? (
+                    <span style={{ color: '#4ade80' }}>&#10003;</span>
+                  ) : company.has_emergency === false ? (
+                    <span style={{ color: '#555' }}>—</span>
+                  ) : (
+                    <span style={{ color: '#333' }}>—</span>
+                  )}
+                </td>
+                <td className="px-3 py-2.5 text-center text-xs" style={{ color: getModernityColor(company.website_modernity) }}>
+                  {getModernityLabel(company.website_modernity)}
                 </td>
                 <td className="px-3 py-2.5 text-center" style={{ color: getTrendColor(company.margin_trend) }}>
                   {company.margin_trend ?? '—'}
@@ -152,6 +204,18 @@ export function CompanyTable({ companies, onSort, sortField, sortDir, onRowClick
                       </span>
                     )}
                   </div>
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  <input
+                    type="checkbox"
+                    checked={company.contacted === true}
+                    onChange={(e) => {
+                      e.stopPropagation()
+                      onContactedToggle?.(company.id, e.target.checked)
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ accentColor: '#d4a843', cursor: 'pointer' }}
+                  />
                 </td>
               </tr>
             )
