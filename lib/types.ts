@@ -53,6 +53,33 @@ export interface Company {
   verification_issues: string[] | null;
   source: string | null;
   description: string | null;
+  // Enrichment fields
+  website_url: string | null;
+  website_status: string | null;
+  website_confidence: number | null;
+  has_maintenance: boolean | null;
+  has_maintenance_evidence: string | null;
+  has_emergency: boolean | null;
+  has_emergency_evidence: string | null;
+  website_modernity: string | null;
+  website_modernity_note: string | null;
+  founder_name: string | null;
+  founder_title: string | null;
+  founder_source: string | null;
+  founder_confidence: number | null;
+  enrichment_status: string | null;
+  enrichment_notes: string | null;
+  // Contact & digital presence
+  bnb_gerant_name: string | null;
+  bnb_administrators: string | null;
+  founder_email: string | null;
+  instagram_url: string | null;
+  facebook_url: string | null;
+  linkedin_founder_url: string | null;
+  linkedin_company_url: string | null;
+  digital_presence_score: number | null;
+  preferred_outreach_channel: string | null;
+  digital_notes: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { Company } from '@/lib/types'
 import { ScoreBadge } from '@/components/ui/score-badge'
 
@@ -53,7 +53,35 @@ function ScoreBar({ label, value, max }: ScoreBarProps) {
   )
 }
 
+function normalizeUrl(url: string): string {
+  if (!/^https?:\/\//i.test(url)) return `https://${url}`
+  return url
+}
+
+function truncateUrl(url: string, max = 40): string {
+  const short = url.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '')
+  return short.length > max ? short.slice(0, max) + '…' : short
+}
+
+function ContactRow({ icon, label, value, href }: { icon: string; label: string; value: string; href?: string }) {
+  return (
+    <div className="flex items-center gap-2 py-1.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <span className="text-sm w-5 text-center">{icon}</span>
+      <span className="text-xs w-28 shrink-0" style={{ color: '#888888' }}>{label}</span>
+      {href ? (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs truncate" style={{ color: '#d4a843' }}>
+          {value}
+        </a>
+      ) : (
+        <span className="text-xs truncate" style={{ color: '#f5f5f5' }}>{value}</span>
+      )}
+    </div>
+  )
+}
+
 export function CompanyDetailModal({ company, onClose }: CompanyDetailModalProps) {
+  const [activeTab, setActiveTab] = useState<'financials' | 'contact'>('financials')
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -146,63 +174,9 @@ export function CompanyDetailModal({ company, onClose }: CompanyDetailModalProps
             <ScoreBadge score={company.pe_score} size="md" />
           </div>
 
-          {/* Financial table */}
-          <div className="mb-6">
-            <h3 className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: '#555555' }}>
-              Financial History
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    <th className="text-left px-2 py-2 text-xs" style={{ color: '#555555' }}></th>
-                    {years.map((y) => (
-                      <th
-                        key={y.suffix}
-                        className="text-right px-2 py-2 text-xs font-medium"
-                        style={{ color: '#888888' }}
-                      >
-                        {y.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {financialRows.map((row) => (
-                    <tr key={row.field} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <td className="px-2 py-2 text-xs" style={{ color: '#888888' }}>{row.label}</td>
-                      {years.map((y) => {
-                        const val = getFinancialValue(row.field, y.suffix)
-                        return (
-                          <td key={y.suffix} className="text-right px-2 py-2 text-xs" style={{ color: '#f5f5f5' }}>
-                            {row.field === 'employees' ? formatEmployees(val) : formatEuro(val)}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* PE Score breakdown */}
-          <div className="mb-6">
-            <h3 className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: '#555555' }}>
-              PE Score Breakdown
-            </h3>
-            <ScoreBar label="Revenue Fit" value={company.score_revenue_fit} max={25} />
-            <ScoreBar label="Financial Health" value={company.score_financial_health} max={25} />
-            <ScoreBar label="Growth Quality" value={company.score_growth_quality} max={25} />
-            <ScoreBar label="Operational Fit" value={company.score_operational_fit} max={25} />
-          </div>
-
           {/* Flags */}
           {flags.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: '#555555' }}>
-                Investment Flags
-              </h3>
+            <div className="mb-4">
               <div className="flex flex-wrap gap-2">
                 {flags.map((flag, i) => (
                   <span
@@ -221,32 +195,213 @@ export function CompanyDetailModal({ company, onClose }: CompanyDetailModalProps
             </div>
           )}
 
-          {/* Analyst summary */}
-          {company.analyst_summary && (
-            <div className="mb-6">
-              <h3 className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: '#555555' }}>
-                Analyst Summary
-              </h3>
-              <p className="text-sm leading-relaxed" style={{ color: '#888888' }}>
-                {company.analyst_summary}
-              </p>
-            </div>
+          {/* Tab Navigation */}
+          <div className="flex gap-0 mb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <button
+              onClick={() => setActiveTab('financials')}
+              className="px-4 py-2 text-xs font-medium transition-colors"
+              style={{
+                color: activeTab === 'financials' ? '#f5f5f5' : '#555555',
+                borderBottom: activeTab === 'financials' ? '2px solid #1F49F4' : '2px solid transparent',
+                background: 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              Financials
+            </button>
+            <button
+              onClick={() => setActiveTab('contact')}
+              className="px-4 py-2 text-xs font-medium transition-colors"
+              style={{
+                color: activeTab === 'contact' ? '#f5f5f5' : '#555555',
+                borderBottom: activeTab === 'contact' ? '2px solid #1F49F4' : '2px solid transparent',
+                background: 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              Contact & Digital
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'financials' && (
+            <>
+              {/* Financial table */}
+              <div className="mb-6">
+                <h3 className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: '#555555' }}>
+                  Financial History
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                        <th className="text-left px-2 py-2 text-xs" style={{ color: '#555555' }}></th>
+                        {years.map((y) => (
+                          <th
+                            key={y.suffix}
+                            className="text-right px-2 py-2 text-xs font-medium"
+                            style={{ color: '#888888' }}
+                          >
+                            {y.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {financialRows.map((row) => (
+                        <tr key={row.field} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <td className="px-2 py-2 text-xs" style={{ color: '#888888' }}>{row.label}</td>
+                          {years.map((y) => {
+                            const val = getFinancialValue(row.field, y.suffix)
+                            return (
+                              <td key={y.suffix} className="text-right px-2 py-2 text-xs" style={{ color: '#f5f5f5' }}>
+                                {row.field === 'employees' ? formatEmployees(val) : formatEuro(val)}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* PE Score breakdown */}
+              <div className="mb-6">
+                <h3 className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: '#555555' }}>
+                  PE Score Breakdown
+                </h3>
+                <ScoreBar label="Revenue Fit" value={company.score_revenue_fit} max={25} />
+                <ScoreBar label="Financial Health" value={company.score_financial_health} max={25} />
+                <ScoreBar label="Growth Quality" value={company.score_growth_quality} max={25} />
+                <ScoreBar label="Operational Fit" value={company.score_operational_fit} max={25} />
+              </div>
+
+              {/* Analyst summary */}
+              {company.analyst_summary && (
+                <div className="mb-6">
+                  <h3 className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: '#555555' }}>
+                    Analyst Summary
+                  </h3>
+                  <p className="text-sm leading-relaxed" style={{ color: '#888888' }}>
+                    {company.analyst_summary}
+                  </p>
+                </div>
+              )}
+
+              {/* Verification issues */}
+              {issues.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: '#f87171' }}>
+                    Verification Issues
+                  </h3>
+                  <ul className="space-y-1">
+                    {issues.map((issue, i) => (
+                      <li key={i} className="text-xs" style={{ color: '#f87171' }}>
+                        &bull; {issue}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
           )}
 
-          {/* Verification issues */}
-          {issues.length > 0 && (
-            <div>
-              <h3 className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: '#f87171' }}>
-                Verification Issues
-              </h3>
-              <ul className="space-y-1">
-                {issues.map((issue, i) => (
-                  <li key={i} className="text-xs" style={{ color: '#f87171' }}>
-                    &bull; {issue}
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {activeTab === 'contact' && (
+            <>
+              {/* Contact & Digital Presence */}
+              <div className="mb-6">
+                {(() => {
+                  const gerant = company.bnb_gerant_name || company.founder_name || null
+                  const email = company.founder_email || null
+                  const website = company.website_url || company.website || null
+                  const liFounder = company.linkedin_founder_url || null
+                  const liCompany = company.linkedin_company_url || null
+                  const ig = company.instagram_url || null
+                  const fb = company.facebook_url || null
+                  const score = company.digital_presence_score
+                  const channel = company.preferred_outreach_channel
+                  const notes = company.digital_notes
+                  const hasAny = gerant || email || website || liFounder || liCompany || ig || fb
+
+                  if (!hasAny) {
+                    return (
+                      <p className="text-xs" style={{ color: '#555555' }}>
+                        No contact or digital presence data available for this company.
+                      </p>
+                    )
+                  }
+
+                  return (
+                    <div>
+                      {gerant && <ContactRow icon="👤" label="Gérant" value={gerant} />}
+                      {email && <ContactRow icon="✉" label="Email" value={email} href={`mailto:${email}`} />}
+                      {website && (
+                        <ContactRow icon="🌐" label="Website" value={truncateUrl(website)} href={normalizeUrl(website)} />
+                      )}
+                      {liFounder && (
+                        <ContactRow icon="in" label="LinkedIn (person)" value={truncateUrl(liFounder)} href={normalizeUrl(liFounder)} />
+                      )}
+                      {liCompany && (
+                        <ContactRow icon="in" label="LinkedIn (company)" value={truncateUrl(liCompany)} href={normalizeUrl(liCompany)} />
+                      )}
+                      {ig && (
+                        <ContactRow icon="📷" label="Instagram" value={truncateUrl(ig)} href={normalizeUrl(ig)} />
+                      )}
+                      {fb && (
+                        <ContactRow icon="f" label="Facebook" value={truncateUrl(fb)} href={normalizeUrl(fb)} />
+                      )}
+
+                      {/* Digital presence footer */}
+                      {(score !== null || channel || company.website_modernity) && (
+                        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                          {score !== null && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium" style={{
+                              background: score >= 6 ? 'rgba(74,222,128,0.12)' : score >= 3 ? 'rgba(251,146,60,0.12)' : 'rgba(248,113,113,0.12)',
+                              color: score >= 6 ? '#4ade80' : score >= 3 ? '#fb923c' : '#f87171',
+                            }}>
+                              Digital Score: {score}/10
+                            </span>
+                          )}
+                          {channel && (
+                            <span className="px-2 py-0.5 rounded text-[10px]" style={{ background: 'rgba(31,73,244,0.12)', color: '#6b8aff' }}>
+                              {channel}
+                            </span>
+                          )}
+                          {company.website_modernity && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium" style={{
+                              background: company.website_modernity === 'modern' ? 'rgba(74,222,128,0.12)' : company.website_modernity === 'dated' ? 'rgba(251,146,60,0.12)' : 'rgba(248,113,113,0.12)',
+                              color: company.website_modernity === 'modern' ? '#4ade80' : company.website_modernity === 'dated' ? '#fb923c' : '#f87171',
+                            }}>
+                              {company.website_modernity === 'modern' ? 'Modern Site' : company.website_modernity === 'dated' ? 'Dated Site' : 'Old Site'}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Services */}
+                      {(company.has_maintenance === true || company.has_emergency === true) && (
+                        <div className="flex items-center gap-3 mt-3">
+                          {company.has_maintenance === true && (
+                            <span className="text-xs" style={{ color: '#4ade80' }}>Maintenance</span>
+                          )}
+                          {company.has_emergency === true && (
+                            <span className="text-xs" style={{ color: '#4ade80' }}>24h Emergency</span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* AI Notes */}
+                      {notes && (
+                        <p className="text-xs mt-3 italic" style={{ color: '#888888' }}>
+                          {notes}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+            </>
           )}
         </div>
       </div>
